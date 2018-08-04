@@ -11,6 +11,8 @@ namespace The_Game
         public static Room Home;
         public static Room Trail;
 
+        public static RoomList All = new RoomList();
+
         public string name { get; private set; }
         public Room parent { get; private set; }
         public RoomList children = new RoomList();
@@ -25,8 +27,9 @@ namespace The_Game
         {
             this.name = name;
             this.parent = parent;
-            this.items = new Inventory(name + " Items", Inventory.max);
+            this.items = new Inventory(name + " Items", Inventory.MAX);
             this.canEnter = canEnter;
+            All.Add(this);
         }
 
         public void LookAround()
@@ -51,8 +54,15 @@ namespace The_Game
                 if (items.Count() > 0)
                 {
                     Console.WriteLine("Items:");
+                    Inventory temp = new Inventory("temp", Inventory.MAX);
                     foreach (Item i in items.All())
-                        Console.WriteLine("\t" + i.name);
+                    {
+                        if (!temp.Contains(i))
+                        {
+                            temp.Add(i);
+                            Console.WriteLine("\t" + i.name + ((items.Count(i) > 1) ? " (x" + ((items.Count(i) < 10) ? "0" : "") + items.Count(i) + ")" : ""));
+                        }
+                    }
                 }
             }
             if (parent != null)
@@ -72,8 +82,9 @@ namespace The_Game
 
         public bool Remove(string room)
         {
+            room = room.Trim().ToLower();
             foreach (Room r in rooms)
-                if (r.name == room)
+                if (r.name.ToLower() == room)
                     return rooms.Remove(r);
             return false;
         }
@@ -88,8 +99,9 @@ namespace The_Game
 
         public Room Find(string room)
         {
+            room = room.Trim().ToLower();
             foreach (Room r in rooms)
-                if (r.name == room)
+                if (r.name.ToLower() == room)
                     return r;
             return null;
         }
@@ -98,8 +110,9 @@ namespace The_Game
 
         public bool Contains(string room)
         {
+            room = room.Trim().ToLower();
             foreach (Room r in rooms)
-                if (r.name == room)
+                if (r.name.ToLower() == room)
                     return true;
             return false;
         }

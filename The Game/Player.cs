@@ -11,18 +11,20 @@ namespace The_Game
         public string name { get; private set; }
         public Inventory items;
         public bool inventoryOpen = false;
+        public int inventorySize = 8;
 
         public Player(string name)
         {
             this.name = name;
-            items = new Inventory(name + "'s Inventory", 8);
+            items = new Inventory(name + "'s Inventory", inventorySize);
         }
 
         public int ExpandInventory()
         {
-            if (items.size != Inventory.max)
-                items.size *= 2;
-            return items.size;
+            if (inventorySize != Inventory.MAX)
+                inventorySize *= 2;
+            items.size = inventorySize;
+            return inventorySize;
         }
     }
 }

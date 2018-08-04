@@ -10,14 +10,17 @@ namespace The_Game
     {
         public static Person Paul;
 
+        public static PersonList All = new PersonList();
+
         public string name { get; private set; }
         public string description = "";
-        private Inventory items;
+        public Inventory items;
 
         public Person(string name)
         {
             this.name = name;
-            this.items = new Inventory(name + "'s Inventory", Inventory.max);
+            this.items = new Inventory(name + "'s Inventory", Inventory.MAX);
+            All.Add(this);
         }
 
         public delegate void del(Game g);
@@ -40,8 +43,9 @@ namespace The_Game
 
         public bool Remove(string person)
         {
+            person = person.Trim().ToLower();
             foreach (Person p in people)
-                if (p.name == person)
+                if (p.name.ToLower() == person)
                     return people.Remove(p);
             return false;
         }
@@ -56,8 +60,9 @@ namespace The_Game
 
         public Person Find(string person)
         {
+            person = person.Trim().ToLower();
             foreach (Person p in people)
-                if (p.name == person)
+                if (p.name.ToLower() == person)
                     return p;
             return null;
         }
@@ -72,8 +77,9 @@ namespace The_Game
 
         public bool Contains(string person)
         {
+            person = person.Trim().ToLower();
             foreach (Person p in people)
-                if (p.name == person)
+                if (p.name.ToLower() == person)
                     return true;
             return false;
         }

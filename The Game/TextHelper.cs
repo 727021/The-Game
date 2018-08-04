@@ -64,7 +64,9 @@ namespace The_Game
             foreach (string line in title)
             {
                 int width = ((Console.WindowWidth - line.Length) / 2) - 1;
-                string spaces = new string(' ', width);
+                string spaces = string.Empty;
+                if (width > 0)
+                    spaces = new string(' ', width);
 
                 Console.ForegroundColor = Colors.borderColor;
                 Console.Write(((line.Length % 2 == 0) ? "║" : "║ ") + spaces);

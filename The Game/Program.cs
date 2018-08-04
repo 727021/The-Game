@@ -13,7 +13,7 @@ namespace The_Game
             Game.Debug("PROGRAM START");
             Console.Title = "The Game";
 
-            Game g = new Game(); // Game's initializer should check whether we load a game or
+            Game g = new Game(args); // Game's initializer should check whether we load a game or
                                  // start a new one
 
             while (g.running)
@@ -108,39 +108,32 @@ namespace The_Game
             }
 
             Console.WriteLine("You look in your inventory:");
-            if (game.player.items.Count() == 0)
-                Console.WriteLine("Hey, there's nothing in here!");
-            int c = 0;
-            foreach (Item i in game.player.items.All())
-            {
-                c++;
-                Console.Write("\t" + i.name);
-                if (c % 3 == 0)
-                    Console.Write("\r\n");
-            }
-            Console.WriteLine();
+            DisplayInventory(game);
         }
 
         public static void Go(Game game, string room)
         {
-            if (game.currentRoom.name == room)
+            room = room.Trim().ToLower();
+            if (game.currentRoom.name.ToLower() == room)
             {
-                Console.WriteLine("You're already in " + room + "!");
+                Console.WriteLine("You're already in " + game.currentRoom.name + "!");
                 return;
             }
-            if (game.currentRoom.parent != null && game.currentRoom.parent.name == room)
+            if (game.currentRoom.parent != null && game.currentRoom.parent.name.ToLower() == room)
             {
                 Back(game);
                 return;
             }
             if (!game.currentRoom.children.Contains(room))
             {
-                Console.WriteLine(room + "? Where is that?");
+                Console.WriteLine(room.First().ToString().ToUpper() + room.Substring(1) + "? Where is that?");
                 return;
             }
             game.currentRoom = game.currentRoom.children.Find(room);
             Console.Clear();
             Console.Title = "The Game - " + game.currentRoom.name;
+            if (game.player.inventoryOpen)
+                Console.Title = "The Game - " + game.player.name + "'s Inventory (" + game.currentRoom.name + ")";
             Console.WriteLine(game.currentRoom.description);
             Console.WriteLine("(Welcome to " + game.currentRoom.name + ")");
             Console.WriteLine();
@@ -157,6 +150,8 @@ namespace The_Game
             game.currentRoom = game.currentRoom.parent;
             Console.Clear();
             Console.Title = "The Game - " + game.currentRoom.name;
+            if (game.player.inventoryOpen)
+                Console.Title = "The Game - " + game.player.name + "'s Inventory (" + game.currentRoom.name + ")";
             Console.WriteLine(game.currentRoom.description);
             Console.WriteLine("(Welcome back to " + game.currentRoom.name + ")");
             Console.WriteLine();
@@ -178,6 +173,7 @@ namespace The_Game
             }
             Console.WriteLine("You check the " + item + "...");
             Console.WriteLine();
+            Console.WriteLine(inventory.Find(item).name + ((inventory.Find(item).uses > 0) ? ":\t(" + inventory.Find(item).uses + " use(s) left)" : ":"));
             Console.WriteLine(inventory.Find(item).description);
         }
 
@@ -197,7 +193,9 @@ namespace The_Game
             Console.WriteLine("You use the " + item + "...");
             Console.WriteLine();
             Console.WriteLine(inventory.Find(item).interact);
-            if (inventory.Find(item).oneUse)
+            if (inventory.Find(item).uses > 0)
+                inventory.Find(item).uses--;
+            if (inventory.Find(item).uses == 0)
                 inventory.Remove(item);
         }
 
@@ -208,14 +206,14 @@ namespace The_Game
                 Console.WriteLine("What? There's no " + item + " in here...");
                 return;
             }
-            if (game.player.items.Full())
-            {
-                Console.WriteLine("Your inventory is full! Drop something to make some space.");
-                return;
-            }
             if (!game.currentRoom.items.Find(item).canTake)
             {
                 Console.WriteLine("Sorry " + game.player.name + ", that " + item + " has to stay here.");
+                return;
+            }
+            if (game.player.items.Full())
+            {
+                Console.WriteLine("Your inventory is full! Drop something to make some space.");
                 return;
             }
             game.player.items.Add(game.currentRoom.items.Find(item));
@@ -228,21 +226,34 @@ namespace The_Game
             if (game.player.inventoryOpen)
             {
                 game.player.inventoryOpen = false;
+                Console.Title = "The Game - " + game.currentRoom.name;
                 Console.WriteLine("You closed your inventory.");
                 Console.WriteLine("You have " + game.player.items.Space() + " space left.");
                 return;
             }
             game.player.inventoryOpen = true;
+            Console.Title = "The Game - " + game.player.name + "'s Inventory (" + game.currentRoom.name + ")";
             Console.WriteLine("You open your inventory:");
+            DisplayInventory(game);
+        }
+
+        public static void DisplayInventory(Game game)
+        {
             if (game.player.items.Count() == 0)
                 Console.WriteLine("Hey, there's nothing in here!");
             int c = 0;
+            Inventory temp = new Inventory("temp", Inventory.MAX);
             foreach (Item i in game.player.items.All())
             {
-                c++;
-                Console.Write("\t" + i.name);
+                if (!temp.Contains(i))
+                {
+                    temp.Add(i);
+                    c++;
+                    Console.Write("\t" + i.name + ((game.player.items.Count(i) > 1) ? " (x" + ((game.player.items.Count(i) < 10) ? "0" : "") + game.player.items.Count(i) + ")" : "   "));
+                }
+
                 if (c % 3 == 0)
-                    Console.Write("\r\n");
+                    Console.Write(Environment.NewLine);
             }
             Console.WriteLine();
         }
@@ -259,16 +270,16 @@ namespace The_Game
                 Console.WriteLine("You don't have any " + item + "...");
                 return;
             }
-            bool breakItem = game.player.items.Find(item).breakOnDrop;
-            if (!breakItem)
-                game.currentRoom.items.Add(game.player.items.Find(item));
-            game.player.items.Remove(item);
+            
             Console.WriteLine("Yeah, just drop that " + item + " anywhere.");
-            if (breakItem)
+            if (game.player.items.Find(item).breakOnDrop)
                 Console.WriteLine("Oh look, you broke it. Nice one, " + game.player.name + ".");
             else
+            {
+                game.currentRoom.items.Add(game.player.items.Find(item));
                 Console.WriteLine("Don't worry. That " + item + " will be waiting for you right where you left it.");
-
+            }
+            game.player.items.Remove(item);
         }
 
         public static void Talk(Game game, string person)
@@ -358,6 +369,9 @@ namespace The_Game
                 return;
 
             // Add option to save to a file
+            Console.WriteLine("Saving game...");
+            FileManager.SaveGame(game);
+            Console.WriteLine("Game saved.");
 
             Console.WriteLine();
             Console.WriteLine("Thanks for playing!");

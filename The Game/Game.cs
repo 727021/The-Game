@@ -14,22 +14,85 @@ namespace The_Game
         public Room currentRoom;
         public Player player;
 
-        public Game()
+        public Game(string[] args)
         {
             // Add option to load from a file
+#if DEBUG
+            Console.Title += " [DEBUG]";
+#endif
+            bool load = (args.Length > 0);
 
+            DisplayTitle(load);
 
-            DisplayTitle();
+            if (load)
+            {
+                Console.ReadKey();
+                Console.Clear();
+            }
+            else
+            {
+                ConsoleKey c = Console.ReadKey(true).Key;
+                while (c != ConsoleKey.N && c != ConsoleKey.L)
+                    c = Console.ReadKey(true).Key;
+                Console.Clear();
+                if (c == ConsoleKey.N)
+                    load = false;
+                else
+                {
+                    load = true;
+                    Console.WriteLine("Which player's save do you want to use?");
+                    Console.Write(" > ");
+                    string name = Console.ReadLine();
+                    while (!System.IO.File.Exists(System.IO.Directory.GetCurrentDirectory() + "/saves/data/" + name + ".tgs"))
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("There is no save file for '" + name + "'");
+                        Console.WriteLine("Which player's save do you want to use?");
+                        Console.Write(" > ");
+                        name = Console.ReadLine();
+                    }
+                    args = new string[] { name };
+                }
+            }
 
-            // Get the player's name
-            Console.WriteLine("Welcome to The Game! Before we start, what's your name?");
-            Console.Write(" > ");
-            string playerName = Console.ReadLine();
-            Console.WriteLine();
-            Console.WriteLine("Okay, " + playerName + "! Let's get started.");
-            Console.Clear();
+            if (!load)
+            {
+                // Get the player's name
+                Console.WriteLine("Welcome to The Game! Before we start, what's your name?");
+                Console.Write(" > ");
+                string playerName = Console.ReadLine().Trim();
+                Console.WriteLine();
+            checkName:
+                while (String.IsNullOrEmpty(playerName)) // Make sure playerName isn't empty
+                {
+                    Console.WriteLine("Really, what's your name?");
+                    Console.Write(" > ");
+                    playerName = Console.ReadLine().Trim();
+                    Console.WriteLine();
+                }
+                Console.WriteLine("So, your name is " + playerName + "? (yes/no)");
+                Console.Write(" > ");
+                string confirm = Console.ReadLine().Trim().ToLower();
+                Console.WriteLine();
+                if (confirm != "yes")
+                {
+                    Console.WriteLine("Okay, what's your name then?");
+                    Console.Write(" > ");
+                    playerName = Console.ReadLine().Trim();
+                    Console.WriteLine();
+                    goto checkName;
+                }
+                Console.WriteLine("Okay, " + playerName + "! Let's get started.");
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey();
+                Console.Clear();
 
-            player = new Player(playerName);
+                player = new Player(playerName);
+            }
+            else
+                player = new Player("");
+
+            
 
             InitializeItems();
             InitializePeople();
@@ -37,6 +100,11 @@ namespace The_Game
 
             currentRoom = Room.Home;
 
+            if (load)
+            {
+                FileManager.LoadGame(this, args[0].Split('.')[0]);
+                Room.Home.description = player.name + "'s house";
+            }
             Console.Title = "The Game - " + currentRoom.name;
             Console.WriteLine(currentRoom.description);
             Console.WriteLine("(Welcome to " + currentRoom.name + ")");
@@ -44,7 +112,7 @@ namespace The_Game
             Console.WriteLine("Type 'look' to look around.");
         }
 
-        public static void DisplayTitle()
+        public static void DisplayTitle(bool load = false)
         {
             string[] title = {
                 "_________          _______    _______  _______  _______  _______ ",
@@ -60,9 +128,9 @@ namespace The_Game
                 "",
                 "",
                 "",
-                "",
-                "Press any key to play...",
-                "",
+                "Press L to load a save file",
+                "or",
+                "Press N to start a new game",
                 "",
                 "",
                 "",
@@ -71,18 +139,48 @@ namespace The_Game
                 "(Copyright © 2018)"
             };
 
+            if (load)
+            {
+                title = new string[]{
+                    "_________          _______    _______  _______  _______  _______ ",
+                    "\\__   __/|\\     /|(  ____ \\  (  ____ \\(  ___  )(       )(  ____ \\",
+                    "   ) (   | )   ( || (    \\/  | (    \\/| (   ) || () () || (    \\/",
+                    "   | |   | (___) || (__      | |      | (___) || || || || (__    ",
+                    "   | |   |  ___  ||  __)     | | ____ |  ___  || |(_)| ||  __)   ",
+                    "   | |   | (   ) || (        | | \\_  )| (   ) || |   | || (      ",
+                    "   | |   | )   ( || (____/\\  | (___) || )   ( || )   ( || (____/\\",
+                    "   )_(   |/     \\|(_______/  (_______)|/     \\||/     \\|(_______/",
+                    "",
+                    "v" + version,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "Press any key to continue...",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "Developed by:",
+                    "Andrew \"727021\" Schimelpfening",
+                    "(Copyright © 2018)"
+                    };
+            }
+
+            Console.Clear();
             TextHelper.BorderedText(title);
-            Console.ReadKey();
         }
 
         public static bool debug = true;
         public static void Debug(string text)
         {
+#if DEBUG
             string filename = DateTime.Today.ToShortDateString().Replace('/', '_') + ".txt";
             StreamWriter fdebug = File.AppendText(filename);
             fdebug.WriteLine("[" + DateTime.Now.ToLongTimeString() + "]: " + text);
             fdebug.Close();
             fdebug.Dispose();
+#endif
         }
 
         #region = Initializers = 
@@ -113,6 +211,7 @@ namespace The_Game
             Item.Bread.description = "Look! A loaf of bread! You know, I am kind of hungry...";
             Item.Bread.interact = "Mmmmm, that bread was delicious! I wish I had more...";
             Item.Bread.oneUse = true;
+            Item.Bread.uses = 1;
         }
 
         private void InitializeRooms()
@@ -125,10 +224,7 @@ namespace The_Game
                 "It looks like someone left you a letter... Type 'check WelcomeLetter' to look at it!";
             Room.Home.items.Add(Item.WelcomeLetter);
             Room.Home.items.Add(Item.Egg);
-            Room.Home.items.Add(Item.Bread);
-            Room.Home.items.Add(Item.Bread);
-            Room.Home.items.Add(Item.Bread);
-            Room.Home.items.Add(Item.Bread);
+            Room.Home.items.Add(Item.Bread, 4);
 
             // TRAIL
             Room.Trail = new Room("Trail", Room.Home);
@@ -136,8 +232,7 @@ namespace The_Game
             Room.Trail.lookDescription = "It's just a long, dusty trail. Some small shrubs line one side of the road.\r\n" +
                 "What could be at the end?";
             Room.Trail.items.Add(Item.Egg);
-            Room.Home.items.Add(Item.Bread);
-            Room.Home.items.Add(Item.Bread);
+            Room.Trail.items.Add(Item.Bread, 2);
             Room.Trail.people.Add(Person.Paul);
 
             Debug("Adding children to rooms");
@@ -151,7 +246,7 @@ namespace The_Game
             Person.Paul.description = "Just a guy";
             Person.Paul.Talk = delegate (Game game)
             {
-                Console.WriteLine("Hi, I'm paul.");
+                Console.WriteLine("Hi, I'm Paul.");
                 Console.Write("What's your name? ");
                 string name = Console.ReadLine();
                 Console.WriteLine("Nice to meet you, " + name + "!");

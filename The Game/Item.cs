@@ -12,6 +12,8 @@ namespace The_Game
         public static Item Egg;
         public static Item Bread;
 
+        public static Inventory All = new Inventory("All Items", Inventory.MAX);
+
         public string name { get; private set; }
         public string description;
         public string interact;
@@ -20,13 +22,21 @@ namespace The_Game
         public bool canGive = true;
         public bool breakOnDrop = false;
         public bool oneUse = false;
+        public int uses = -1; // -1 means unlimited uses
 
-        public Item(string name) => this.name = name;
+        public Item(string name)
+        {
+            this.name = name;
+            if (!All.Contains(this))
+                All.Add(this);
+        }
+
+        public override string ToString() => name;
     }
 
     class Inventory
     {
-        public const int max = 256;
+        public const int MAX = 256;
 
         private List<Item> items = new List<Item>();
         public string name { get; private set; }
@@ -44,12 +54,21 @@ namespace The_Game
 
         public void Add(Item item) => items.Add(item);
 
+        public void Add(Item item, int count)
+        {
+            for (int i = 0; i < count; i++)
+                items.Add(item);
+        }
+
+        public void AddRange(Item[] iitems) => items.AddRange(items);
+
         public bool Remove(Item item) => items.Remove(item);
 
         public bool Remove(string item)
         {
+            item = item.Trim().ToLower();
             foreach (Item i in items)
-                if (i.name == item)
+                if (i.name.ToLower() == item)
                     return items.Remove(i);
             return false;
         }
@@ -64,8 +83,9 @@ namespace The_Game
 
         public Item Find(string item)
         {
+            item = item.Trim().ToLower();
             foreach (Item i in items)
-                if (i.name == item)
+                if (i.name.ToLower() == item)
                     return i;
             return null;
         }
@@ -80,8 +100,9 @@ namespace The_Game
 
         public bool Contains(string item)
         {
+            item = item.Trim().ToLower();
             foreach (Item i in items)
-                if (i.name == item)
+                if (i.name.ToLower() == item)
                     return true;
             return false;
         }
@@ -94,5 +115,25 @@ namespace The_Game
         }
 
         public int Count() => items.Count;
+
+        public int Count(Item item)
+        {
+            int count = 0;
+            foreach (Item i in items)
+                if (i == item)
+                    count++;
+            return count;
+        }
+
+        public int Count(string item)
+        {
+            item = item.Trim().ToLower();
+            int count = 0;
+            foreach (Item i in items)
+                if (i.name.ToLower() == item)
+                    count++;
+            return count;
+        }
+
     }
 }
